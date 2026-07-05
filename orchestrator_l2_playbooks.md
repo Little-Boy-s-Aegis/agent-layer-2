@@ -1,10 +1,10 @@
-# L3 Orchestrator Offline Playbook - Banking SOC
+# L2 Orchestrator Offline Playbook - Banking SOC
 
 Source files used as authority:
 - `mitre-attack-kb/mitre_attack_full.json`
 - `mitre-attack-kb/mitre_attack_full.md`
 
-This playbook is designed for an L3 SOC orchestrator that has no internet access. The orchestrator must use verified evidence, the offline MITRE ATT&CK KB, this playbook, and reasoning over attacker progression to decide what to contain, what to hunt, what to queue for approval, and what to monitor next.
+This playbook is designed for an L2 SOC orchestrator that has no internet access. The orchestrator must use verified evidence, the offline MITRE ATT&CK KB, this playbook, and reasoning over attacker progression to decide what to contain, what to hunt, what to queue for approval, and what to monitor next.
 
 ## 1. Operating Contract
 
@@ -36,11 +36,13 @@ The orchestrator should construct this internal matching object before route sel
     "atm_or_hsm_involved": false,
     "privileged_identity_involved": false,
     "backup_or_recovery_involved": false,
-    "security_control_involved": false
+    "security_control_involved": false,
+    "fraud_control_involved": false
   },
   "entities": {},
   "evidence": {},
-  "confidence": "HIGH|MEDIUM|LOW"
+  "verification_state": "confirmed|not_confirmed|contradicted|insufficient|not_required",
+  "verification_strength": "strong|supported|weak|none|contradicted"
 }
 ```
 
@@ -68,7 +70,7 @@ Approval rules:
 | Action Class | Approval Mode |
 |--------------|---------------|
 | Add IOC/watchlist, raise monitoring, create temporary detection/hunt | `AUTO` |
-| Block known malicious IP/domain with high confidence and narrow scope | `AUTO` |
+| Block known malicious IP/domain with strong Layer 2 verification and narrow scope | `AUTO` |
 | WAF virtual patch scoped to exploit pattern | `AUTO` |
 | Reset one confirmed compromised password | `AUTO` |
 | Disable one confirmed compromised account | `AUTO` |
@@ -78,6 +80,17 @@ Approval rules:
 | Freeze payments, disconnect SWIFT, isolate Core Banking, HSM, ATM switch, or VLAN | `MANUAL_ONLY` |
 | Notify regulator, SWIFT, card network, customer, law enforcement | `MANUAL_ONLY` |
 | Activate DR or mass password reset | `MANUAL_ONLY` |
+
+Risk score action gate:
+
+| Final Risk Score | Required Handling |
+|------------------|-------------------|
+| `0.0-6.0` | Monitor, preserve, hunt, or request more evidence according to verification state. Do not auto-contain only because Layer 1 alerted. |
+| `>6.0` | Execute all available non-disruptive SOC actions: preserve logs/evidence, raise monitoring, add scoped watchlists or temporary detections, create hunt tasks, open/update SOC ticket, and notify SOC. |
+| `>6.0` **AND** all auto-containment gate conditions met: (1) `threat_confirmed=true`, (2) `l2_independent_verification.performed=true`, (3) `verification_state="confirmed"`, (4) `verification_strength` is `supported` or `strong`, (5) `opa_result="allow"`, (6) SOC Autopilot ON, (7) current time inside execution window (default 08:00-20:00 Asia/Ho_Chi_Minh), (8) action is low/medium impact + scoped + time-bound + reversible + non-manual-only, (9) rollback support exists, (10) confirmed behavior is high-fidelity and dangerous now, (11) action is narrowly targeted to verified entity | Execute eligible containment: scoped IP block, WAF virtual patch, force logout, host quarantine, limited network control, or access revocation. |
+| Any score with manual-only target or high business-impact action | Queue for approval or manual escalation. Never automatically isolate SWIFT, Core Banking, HSM, ATM switch, critical VLAN, DR, broad services, external notifications, destructive cleanup, or data deletion. |
+
+Layer 1 vote count, worker count, or worker confidence must not be used as an action gate. A single Layer 1 positive finding can lead to action when Layer 2 independently verifies the case and the gate above passes.
 
 ## 4. Banking Sensitivity Override
 
@@ -105,7 +118,7 @@ Use this table when a verified technique has no specific playbook trigger. This 
 | `TA0002` | Execution | `PB-EXECUTION` | `CONTAIN` |
 | `TA0003` | Persistence | `PB-PERSIST` | `CONTAIN` |
 | `TA0004` | Privilege Escalation | `PB-PRIVESC` | `CONTAIN_AND_HUNT` |
-| `TA0005` | Stealth | `PB-STEALTH` | `CONTAIN_AND_HUNT` |
+| `TA0005` | Defense Evasion | `PB-STEALTH` | `CONTAIN_AND_HUNT` |
 | `TA0112` | Defense Impairment | `PB-DEFENSE-IMPAIR` | `CONTAIN_AND_HUNT` |
 | `TA0006` | Credential Access | `PB-CRED` | `CONTAIN_AND_HUNT` |
 | `TA0007` | Discovery | `PB-DISCOVERY` | `CONTAIN_AND_HUNT` |
@@ -167,6 +180,8 @@ Use this table when a verified technique has no specific playbook trigger. This 
 | 22 | `PB-ICS-ATM-HSM` | Any ICS-domain technique | ATM, HSM, POS, payment switch, physical terminal, OT-like banking device; use `CRISIS` for `TA0105`, `TA0106`, or `TA0107` | `CONTAIN_AND_HUNT` |
 | 23 | `PB-INSIDER` | `T1078` + `T1098` + data access technique | Internal source, slow velocity, policy deviation, privileged misuse | `CONTAIN_AND_HUNT` |
 | 24 | `PB-ANOMALY` | No MITRE match required | Unknown anomaly, zero-day-like behavior, telemetry gap | `CONTAIN_AND_HUNT` |
+| 25 | `PB-INITIAL-ACCESS` | `TA0001` tactic fallback (no specific technique trigger) | Generic initial access not covered by PB-WEB-EDGE, PB-VALID-ACCOUNT-MISUSE, or PB-SUPPLY | `CONTAIN` |
+| 26 | `PB-IMPACT` | `T1531`, `T1561`, `T1499.004`, `T1657` (non-financial), any `TA0040` technique | Business disruption, availability impact, data destruction not matching PB-RANSOM-IMPACT, PB-DOS, or PB-FINANCIAL-FRAUD | `CRISIS` |
 
 ## 7. Playbook Library
 
@@ -181,7 +196,7 @@ Attacker objective: gain the first foothold through exposed service, phishing, v
 Immediate actions:
 1. AUTO: preserve entry-vector evidence: email, WAF, VPN, SSO, endpoint, browser, API gateway, and network logs.
 2. AUTO: add source IP/domain/account/device/user agent to watchlists.
-3. AUTO: block high-confidence malicious source or URL when scoped.
+3. AUTO: block Layer 2-verified malicious source or URL when scoped.
 4. AUTO: create temporary hunts for execution, persistence, credential access, and C2 from the same entity.
 5. APPROVAL_REQUIRED: queue server isolation or account restriction if the entry point is shared or business-critical.
 
@@ -293,7 +308,7 @@ Attacker objective: move customer, card, payment, credential, or operational dat
 
 Immediate actions:
 1. AUTO: add destination IP/domain/account/object IDs to DLP, proxy, SIEM, and DNS watchlists.
-2. AUTO: block high-confidence malicious destination if scoped and not business-critical.
+2. AUTO: block Layer 2-verified malicious destination if scoped and not business-critical.
 3. AUTO: increase DLP sensitivity for affected users, hosts, repositories, buckets, mailboxes, and data classes.
 4. AUTO: preserve proxy, DNS, NetFlow, firewall, DLP, CASB, cloud storage, database audit, and endpoint file access logs.
 5. APPROVAL_REQUIRED: queue broad egress block, SaaS tenant-level restriction, or server isolation.
@@ -363,7 +378,7 @@ Attacker objective: gain initial foothold, execute code, persist through web she
 
 Immediate actions:
 1. AUTO: deploy scoped WAF virtual patch for confirmed exploit pattern.
-2. AUTO: block high-confidence hostile source IP/domain if scoped.
+2. AUTO: block Layer 2-verified hostile source IP/domain if scoped.
 3. AUTO: preserve WAF, web server, API gateway, application, container, file integrity, EDR, and database audit logs.
 4. AUTO: snapshot suspected web shell path, hash, owner, timestamps, and process connections; do not delete before preservation.
 5. APPROVAL_REQUIRED: queue web server isolation or pool removal if service impact is material.
@@ -574,7 +589,7 @@ Trigger: `T1071`, `T1573`, `T1095`, `T1105`, `T1132`, `T1090`, `T1001`, `T1568`,
 Attacker objective: maintain remote control, transfer tools, execute commands, and coordinate next stages.
 
 Immediate actions:
-1. AUTO: block high-confidence malicious IP/domain when scoped.
+1. AUTO: block Layer 2-verified malicious IP/domain when scoped.
 2. AUTO: add destination, SNI, URI, JA3/JA4, user-agent, process, hash, and DNS indicators to watchlists.
 3. AUTO: preserve DNS, proxy, firewall, NetFlow, EDR network, process, packet samples, and TLS metadata.
 4. APPROVAL_REQUIRED: queue host/server isolation if active compromise is confirmed on critical systems.
@@ -721,7 +736,7 @@ Attacker objective: unknown. Treat as potentially novel exploitation, stealth, m
 Immediate actions:
 1. AUTO: preserve volatile evidence, memory metadata, process tree, network flows, relevant logs, crash dumps, and affected configuration state.
 2. AUTO: increase logging and create temporary detection around the affected entity, behavior, and peer group.
-3. AUTO: add observed indicators to local watchlists with low confidence labels.
+3. AUTO: add observed indicators to local watchlists with provisional labels.
 4. AUTO: isolate user workstation if active compromise or active damage is confirmed.
 5. APPROVAL_REQUIRED: queue server isolation if banking-critical or anomaly spreads across systems.
 
@@ -807,3 +822,5 @@ Before final L3 output, verify:
 8. Banking impact is assessed for SWIFT/payment, Core Banking, customer data, ATM/HSM, privileged identity, backup/recovery, and security controls.
 9. Evidence preservation is listed before disruptive containment.
 10. Regulatory assessment is separated from external notification.
+11. If `final_risk_score_0_10 > 6.0`, output includes `decision.risk_response_floor.triggered=true` and every available non-disruptive floor action is present with `status="executed"` or a documented blocked/unavailable reason.
+12. If an environment-changing action has `status="executed"`, OPA allow, SOC Autopilot ON, execution window, rollback support, scoped target, approval mode, and non-manual action class are all documented.
