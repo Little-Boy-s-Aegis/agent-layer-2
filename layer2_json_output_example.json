@@ -1,0 +1,168 @@
+{
+  "schema_version": "littleboy.soc.layer2.orchestrator_decision.v8",
+  "timestamp": "2026-07-09T04:00:00Z",
+  "orchestrator": {
+    "orchestrator_id": "layer2_orchestrator_soar",
+    "orchestrator_name": "Layer 2 - Orchestrator / SOAR Decision Engine",
+    "mode": "correlation_context_policy_playbook_execution"
+  },
+  "input_summary": {
+    "incident_id": "INC-001",
+    "source_topic": "sensor-results-topic",
+    "output_topic": "incidents-topic",
+    "layer1_schema_version": "littleboy.soc.layer1.agent_finding.v4",
+    "findings": [
+      { "agent_id": "agent_a_internal_network_edr", "threat_detected": true,
+        "capec_id": "CAPEC-560", "mitre_attack_id": "T1021.002",
+        "raw_evidence": "SMB lateral move from HOST-01 to HOST-02." }
+    ]
+  },
+  "correlation": {
+    "correlation_state": "confirmed", "same_attack_assessment": true,
+    "correlated_agent_ids": ["agent_a_internal_network_edr"], "conflicting_agent_ids": [],
+    "correlation_keys": {
+      "entities": ["HOST-01", "HOST-02"],
+      "time_window": { "start": "2026-07-09T03:55:00Z", "end": "2026-07-09T04:00:00Z" },
+      "mitre_attack_ids": ["T1021.002"], "capec_ids": ["CAPEC-560"],
+      "evidence_terms": ["SMB", "lateral movement"]
+    },
+    "unrelated_findings": [],
+    "correlation_rationale": ["Single finding; no cross-agent correlation required."]
+  },
+  "l2_independent_verification": {
+    "performed": true, "required": true, "verification_state": "confirmed",
+    "verification_sources": [
+      { "source_type": "edr", "source_ref": "edr://HOST-01/SMB",
+        "matched_observation": "EDR confirmed SMB lateral move.",
+        "query_status": "matched", "freshness_seconds": 30,
+        "last_seen_at": "2026-07-09T03:59:30Z", "error_ref": null }
+    ],
+    "log_queries_or_refs": ["edr://HOST-01/SMB"],
+    "confirmed_entities": ["HOST-01", "HOST-02"], "contradicting_evidence": [],
+    "verification_strength": "strong", "rationale": ["EDR log confirms."]
+  },
+  "verified_case": {
+    "threat_confirmed": true,
+    "title": "Confirmed SMB Lateral Movement",
+    "summary": "EDR-verified SMB lateral move HOST-01 to HOST-02.",
+    "verified_techniques": ["T1021.002"], "expanded_techniques": ["T1021.002"],
+    "verified_tactics": ["TA0008"], "verified_capec": ["CAPEC-560"],
+    "entities": { "users": [], "accounts_masked": [], "hosts": ["HOST-01", "HOST-02"],
+      "ips": [], "sessions": [], "api_endpoints": [],
+      "transactions_masked": [], "devices": [], "data_objects_masked": [] },
+    "evidence_refs": ["edr://HOST-01/SMB"], "assumptions": []
+  },
+  "scoring": {
+    "score_source": "risk_scoring/attack_vector_risk_scores.md",
+    "score_source_ref": "T1021.002",
+    "score_table_calibration_reason": "SMB lateral movement, internal segment.",
+    "base_threat_score_0_10": 7.5, "asset_criticality_multiplier": 1.0,
+    "raw_context_risk_0_10": 7.5, "risk_cap_applied": false,
+    "risk_cap_0_10": null, "risk_cap_reason": null,
+    "final_risk_score_0_10": 7.5, "priority": "high",
+    "response_mode": "CONTAIN_AND_HUNT",
+    "score_rationale": ["Base 7.5 from T1021.002; strong verification; no cap."]
+  },
+  "banking_impact": {
+    "swift_or_payment_involved": false, "core_banking_involved": false,
+    "customer_data_involved": false, "atm_or_hsm_involved": false,
+    "privileged_identity_involved": false, "backup_or_recovery_involved": false,
+    "security_control_involved": false, "fraud_control_involved": false,
+    "business_criticality": "medium",
+    "impact_rationale": ["Internal workstation segment; no banking-critical path."]
+  },
+  "policy_guardrails": {
+    "opa_required": true, "opa_result": "allow",
+    "policy_decision_refs": ["opa://allow-host-quarantine"],
+    "red_lines_triggered": [], "whitelist_hits": [], "manual_only_reasons": [],
+    "time_bound_required": true, "rollback_required": true
+  },
+  "automation_control": {
+    "soc_autopilot_enabled": true, "mode": "execute", "default_mode": "suggest_only",
+    "auto_containment_path": "l2_verified",
+    "execution_window": { "enabled": true, "timezone": "Asia/Ho_Chi_Minh",
+      "start_local": "08:00", "end_local": "20:00", "in_window": true,
+      "outside_window_behavior": "suggest_only_and_report" },
+    "next_review_minutes": 60,
+    "auto_containment_gates": {
+      "threat_confirmed": true, "l2_verification_performed": true,
+      "verification_confirmed": true, "verification_supported_or_strong": true,
+      "risk_above_floor": true, "opa_allow": true, "soc_autopilot_on": true,
+      "execution_window_open": true, "action_scoped_timebound_reversible": true,
+      "rollback_available": true, "dangerous_now_behavior": true,
+      "verified_target_entity": true
+    },
+    "auto_containment_eligible": true,
+    "containment_gate_rationale": ["All 12 gates true; autopilot ON."],
+    "auto_unblock_after_mins": 60, "rollback_support": true
+  },
+  "playbook_routing": {
+    "activated_playbooks": [
+      { "playbook_id": "PB-LATERAL-MOVE", "trigger_type": "technique",
+        "trigger_value": "T1021.002", "mode": "CONTAIN_AND_HUNT",
+        "rationale": "Confirmed SMB lateral movement." }
+    ],
+    "not_selected": []
+  },
+  "decision": {
+    "final_decision": "auto_execute", "execution_mode": "execute",
+    "risk_response_floor": {
+      "triggered": true, "threshold": 6.0, "completed": true,
+      "required_actions": ["preserve_logs", "raise_monitoring", "open_ticket", "notify_soc"],
+      "performed_actions": ["preserve_logs", "raise_monitoring", "open_ticket", "notify_soc"],
+      "blocked_actions": [], "rationale": ["Risk 7.5 > 6.0; floor actions executed."],
+      "execution_note": null
+    },
+    "justification": "All 12 gates met; autopilot ON; HOST-01 quarantined.",
+    "summary_for_soc": "SMB lateral move confirmed. HOST-01 quarantined 60 min."
+  },
+  "actions": [
+    { "action_id": "act-001", "timestamp": "2026-07-09T04:00:01Z",
+      "priority": "high", "phase": "contain", "action_type": "quarantine_host",
+      "target": { "type": "host", "value_masked": "HOST-01" },
+      "approval_mode": "AUTO", "status": "executed",
+      "ttl_minutes": 60, "expires_at": "2026-07-09T05:00:00Z",
+      "rollback_plan": "Remove quarantine after TTL or SOC review.",
+      "evidence_refs": ["edr://HOST-01/SMB"], "playbook_source": "PB-LATERAL-MOVE",
+      "rationale": "Isolate source host to stop lateral movement.", "risk_if_wrong": "medium" }
+  ],
+  "predictive_defense": {
+    "predicted_techniques": [
+      { "technique_id": "T1003", "technique_name": "OS Credential Dumping",
+        "source": "mitre_prediction_chain",
+        "why_likely": "Lateral movement commonly precedes credential dumping.",
+        "priority": "high" }
+    ],
+    "temporary_detections": ["Detect LSASS access on HOST-02."],
+    "watch_for_next": ["Credential dumping on HOST-02", "Further lateral move from HOST-02"]
+  },
+  "output_and_notification": {
+    "suggested_actions": [],
+    "executed_actions": ["Quarantined HOST-01 60 min.", "Notified SOC."],
+    "notification_targets": ["soc_dashboard", "telegram_teams", "email", "jira"],
+    "ticket_payload": { "title": "SMB Lateral Movement — HOST-01 Quarantined",
+      "priority": "high", "body": "Confirmed lateral move. HOST-01 quarantined 60 min.",
+      "labels": ["PB-LATERAL-MOVE", "auto-executed"] }
+  },
+  "soc_feedback_controls": {
+    "allowed_actions": ["confirm", "undo", "rollback", "extend_investigation", "comment"],
+    "callback_required": true, "callback_channel": "api_call"
+  },
+  "audit": {
+    "immutable_log_required": true,
+    "audit_events": [
+      { "event_type": "decision", "event_time": "2026-07-09T04:00:00Z",
+        "actor": "layer2_orchestrator_soar", "command_signature_ref": null,
+        "details": "All 12 gates true; quarantine HOST-01 executed.", "result": "executed" }
+    ],
+    "compliance_tags": ["ISO27001", "PCI-DSS"]
+  },
+  "safety": {
+    "prompt_injection_observed": false, "prompt_injection_evidence_masked": [],
+    "log_instruction_ignored": true, "sensitive_values_masked": true,
+    "no_destructive_action_selected": true
+  },
+  "quality": {
+    "missing_fields": [], "limitations": [], "requires_human_review": false
+  }
+}

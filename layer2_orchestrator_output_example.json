@@ -1,0 +1,592 @@
+{
+  "schema_version": "littleboy.soc.layer2.orchestrator_decision.v8",
+  "timestamp": "2026-07-05T09:10:00Z",
+  "orchestrator": {
+    "orchestrator_id": "layer2_orchestrator_soar",
+    "orchestrator_name": "Layer 2 - Orchestrator / SOAR Decision Engine",
+    "mode": "correlation_context_policy_playbook_execution"
+  },
+  "input_summary": {
+    "incident_id": "INC-20260705-0012",
+    "source_topic": "sensor-results-topic",
+    "output_topic": "incidents-topic",
+    "layer1_schema_version": "littleboy.soc.layer1.agent_finding.v4",
+    "findings": [
+      {
+        "agent_id": "agent_b_ebanking_api_web_ueba",
+        "threat_detected": true,
+        "capec_id": "CAPEC-1",
+        "mitre_attack_id": "T1190",
+        "raw_evidence": "API request req-7b2e4d91 returned HTTP 200 for masked account A-55** outside the authenticated ownership context."
+      },
+      {
+        "agent_id": "agent_a_internal_network_edr",
+        "threat_detected": true,
+        "capec_id": "",
+        "mitre_attack_id": "T1105",
+        "raw_evidence": "Web host WEB-EBANK-01 opened outbound HTTPS to 198.51.100.42 shortly after the API authorization anomaly."
+      },
+      {
+        "agent_id": "agent_c_atm_iam_adversarial",
+        "threat_detected": false,
+        "capec_id": "",
+        "mitre_attack_id": "",
+        "raw_evidence": "No related IAM, PAM, ATM, or MFA abnormality visible in the supplied window."
+      }
+    ]
+  },
+  "correlation": {
+    "correlation_state": "confirmed",
+    "same_attack_assessment": true,
+    "correlated_agent_ids": [
+      "agent_b_ebanking_api_web_ueba",
+      "agent_a_internal_network_edr"
+    ],
+    "conflicting_agent_ids": [],
+    "correlation_keys": {
+      "entities": [
+        "WEB-EBANK-01",
+        "req-7b2e4d91",
+        "198.51.100.42",
+        "A-55**"
+      ],
+      "time_window": {
+        "start": "2026-07-05T09:04:00Z",
+        "end": "2026-07-05T09:07:00Z"
+      },
+      "mitre_attack_ids": [
+        "T1190",
+        "T1105"
+      ],
+      "capec_ids": [
+        "CAPEC-1"
+      ],
+      "evidence_terms": [
+        "authorization mismatch",
+        "HTTP 200",
+        "outbound HTTPS after anomaly"
+      ]
+    },
+    "unrelated_findings": [
+      {
+        "agent_id": "agent_c_atm_iam_adversarial",
+        "timestamp": null,
+        "capec_id": "",
+        "mitre_attack_id": "",
+        "reason": "Agent C reported no related IAM, PAM, ATM, or MFA abnormality in the supplied window.",
+        "recommended_handling": "drop_no_threat"
+      }
+    ],
+    "correlation_rationale": [
+      "Agent B and Agent A are merged because they share concrete entity links: WEB-EBANK-01, req-7b2e4d91, 198.51.100.42, and masked account A-55**.",
+      "The API authorization anomaly and outbound HTTPS flow occurred within the same three-minute window and form a plausible exploitation-to-egress chain.",
+      "This grouping is not based on worker count or time overlap alone; API gateway and network-flow verification both matched the linked entities."
+    ]
+  },
+  "l2_independent_verification": {
+    "performed": true,
+    "required": true,
+    "verification_state": "confirmed",
+    "verification_sources": [
+      {
+        "source_type": "api_gateway",
+        "source_ref": "req-7b2e4d91",
+        "matched_observation": "API gateway recorded HTTP 200 for a masked account object outside authenticated ownership context.",
+        "query_status": "matched",
+        "freshness_seconds": 60,
+        "last_seen_at": "2026-07-05T09:05:00Z",
+        "error_ref": null
+      },
+      {
+        "source_type": "network",
+        "source_ref": "flow://WEB-EBANK-01/198.51.100.42",
+        "matched_observation": "Network flow recorded outbound HTTPS from WEB-EBANK-01 to 198.51.100.42 within two minutes of the API anomaly.",
+        "query_status": "matched",
+        "freshness_seconds": 120,
+        "last_seen_at": "2026-07-05T09:07:00Z",
+        "error_ref": null
+      }
+    ],
+    "log_queries_or_refs": [
+      "api_gateway:req-7b2e4d91",
+      "network_flow:WEB-EBANK-01:198.51.100.42"
+    ],
+    "confirmed_entities": [
+      "WEB-EBANK-01",
+      "198.51.100.42",
+      "A-55**"
+    ],
+    "contradicting_evidence": [],
+    "verification_strength": "strong",
+    "rationale": [
+      "Independent logs confirm the API anomaly and outbound follow-on activity."
+    ]
+  },
+  "verified_case": {
+    "threat_confirmed": true,
+    "title": "Confirmed eBanking API compromise chain with outbound follow-on activity",
+    "summary": "Layer 1 findings and independent Layer 2 logs describe correlated public API abuse and outbound host activity involving the eBanking path.",
+    "verified_techniques": [
+      "T1190",
+      "T1105"
+    ],
+    "expanded_techniques": [
+      "T1190",
+      "T1105"
+    ],
+    "verified_tactics": [
+      "TA0001",
+      "TA0011"
+    ],
+    "verified_capec": [
+      "CAPEC-1"
+    ],
+    "entities": {
+      "users": [],
+      "accounts_masked": [
+        "A-55**"
+      ],
+      "hosts": [
+        "WEB-EBANK-01"
+      ],
+      "ips": [
+        "198.51.100.42"
+      ],
+      "sessions": [],
+      "api_endpoints": [
+        "account details API"
+      ],
+      "transactions_masked": [],
+      "devices": [],
+      "data_objects_masked": [
+        "A-55**"
+      ]
+    },
+    "evidence_refs": [
+      "req-7b2e4d91",
+      "WEB-EBANK-01 outbound HTTPS to 198.51.100.42"
+    ],
+    "assumptions": [
+      "The account ownership reference used by Agent B is current."
+    ]
+  },
+  "scoring": {
+    "score_source": "risk_scoring/attack_vector_risk_scores.md",
+    "score_source_ref": "T1105",
+    "score_table_calibration_reason": "Ingress tool transfer is near-critical because it commonly enables follow-on compromise.",
+    "base_threat_score_0_10": 9.0,
+    "asset_criticality_multiplier": 1.25,
+    "raw_context_risk_0_10": 10.0,
+    "risk_cap_applied": false,
+    "risk_cap_0_10": 10.0,
+    "risk_cap_reason": "L2 verification confirmed strong evidence; no restrictive cap below 10.0 is applied.",
+    "final_risk_score_0_10": 10.0,
+    "priority": "critical",
+    "response_mode": "CONTAIN_AND_HUNT",
+    "score_rationale": [
+      "T1190 on public eBanking API plus T1105 follow-on activity forms a high-risk chain.",
+      "Public customer-data API raises asset criticality.",
+      "Layer 2 independent logs confirm the attack chain with strong verification."
+    ]
+  },
+  "banking_impact": {
+    "swift_or_payment_involved": false,
+    "core_banking_involved": false,
+    "customer_data_involved": true,
+    "atm_or_hsm_involved": false,
+    "privileged_identity_involved": false,
+    "backup_or_recovery_involved": false,
+    "security_control_involved": false,
+    "fraud_control_involved": false,
+    "business_criticality": "high",
+    "impact_rationale": [
+      "The affected path is an eBanking customer account details API.",
+      "Customer data is at risk; bulk exfiltration is not yet confirmed."
+    ]
+  },
+  "policy_guardrails": {
+    "opa_required": true,
+    "opa_result": "allow",
+    "policy_decision_refs": [
+      "opa://decision/2026-07-05/allow-scoped-web-containment"
+    ],
+    "red_lines_triggered": [],
+    "whitelist_hits": [],
+    "manual_only_reasons": [],
+    "time_bound_required": true,
+    "rollback_required": true
+  },
+  "automation_control": {
+    "soc_autopilot_enabled": false,
+    "mode": "suggest_only",
+    "default_mode": "suggest_only",
+    "auto_containment_path": "none",
+    "execution_window": {
+      "enabled": true,
+      "timezone": "Asia/Ho_Chi_Minh",
+      "start_local": "08:00",
+      "end_local": "20:00",
+      "in_window": true,
+      "outside_window_behavior": "suggest_only_and_report"
+    },
+    "next_review_minutes": 120,
+    "auto_containment_gates": {
+      "threat_confirmed": true,
+      "l2_verification_performed": true,
+      "verification_confirmed": true,
+      "verification_supported_or_strong": true,
+      "risk_above_floor": true,
+      "opa_allow": true,
+      "soc_autopilot_on": false,
+      "execution_window_open": true,
+      "action_scoped_timebound_reversible": true,
+      "rollback_available": true,
+      "dangerous_now_behavior": true,
+      "verified_target_entity": true
+    },
+    "auto_containment_eligible": false,
+    "containment_gate_rationale": [
+      "Layer 2 verification is strong and the risk threshold is met.",
+      "SOC Autopilot is OFF, so environment-changing containment is suggested only."
+    ],
+    "auto_unblock_after_mins": 60,
+    "rollback_support": true
+  },
+  "playbook_routing": {
+    "activated_playbooks": [
+      {
+        "playbook_id": "PB-WEB-EDGE",
+        "trigger_type": "technique",
+        "trigger_value": "T1190",
+        "mode": "CONTAIN",
+        "rationale": "Public eBanking API abuse with customer object exposure."
+      },
+      {
+        "playbook_id": "PB-EXECUTION",
+        "trigger_type": "technique",
+        "trigger_value": "T1105",
+        "mode": "CONTAIN",
+        "rationale": "Follow-on outbound activity from the affected web host suggests tool transfer or C2 setup."
+      }
+    ],
+    "not_selected": []
+  },
+  "decision": {
+    "final_decision": "suggest_only",
+    "execution_mode": "suggest_only",
+    "risk_response_floor": {
+      "triggered": true,
+      "threshold": 6.0,
+      "completed": true,
+      "required_actions": [
+        "preserve_logs",
+        "raise_monitoring",
+        "add_watchlist",
+        "create_hunt",
+        "open_ticket",
+        "notify_soc"
+      ],
+      "performed_actions": [
+        "preserve_logs",
+        "raise_monitoring",
+        "add_watchlist",
+        "create_hunt",
+        "open_ticket",
+        "notify_soc"
+      ],
+      "blocked_actions": [],
+      "rationale": [
+        "Final risk is above 6.0, so non-disruptive SOC response actions are mandatory.",
+        "SOC Autopilot is OFF, so environment-changing containment remains suggest-only."
+      ],
+      "execution_note": "Risk response floor actions were executed; containment was not executed because SOC Autopilot is OFF."
+    },
+    "justification": "Layer 2 verification and risk threshold are met. Non-disruptive response actions are executed, but containment is not executed because SOC Autopilot is OFF.",
+    "summary_for_soc": "Confirmed eBanking API attack chain. Non-disruptive SOC response actions were executed. Suggested containment: block 198.51.100.42 for 60 minutes if SOC enables or approves automation."
+  },
+  "actions": [
+    {
+      "action_id": "act-001",
+      "timestamp": "2026-07-05T09:10:01Z",
+      "priority": "critical",
+      "phase": "preserve",
+      "action_type": "preserve_logs",
+      "target": {
+        "type": "api_endpoint",
+        "value_masked": "account details API"
+      },
+      "approval_mode": "AUTO",
+      "status": "executed",
+      "ttl_minutes": null,
+      "expires_at": null,
+      "rollback_plan": "No rollback required for evidence preservation.",
+      "evidence_refs": [
+        "req-7b2e4d91"
+      ],
+      "playbook_source": "PB-WEB-EDGE",
+      "rationale": "Preserve API gateway, WAF, application, IAM, and database audit evidence before containment.",
+      "risk_if_wrong": "low"
+    },
+    {
+      "action_id": "act-002",
+      "timestamp": "2026-07-05T09:10:02Z",
+      "priority": "high",
+      "phase": "hunt",
+      "action_type": "raise_monitoring",
+      "target": {
+        "type": "host",
+        "value_masked": "WEB-EBANK-01"
+      },
+      "approval_mode": "AUTO",
+      "status": "executed",
+      "ttl_minutes": 120,
+      "expires_at": "2026-07-05T11:10:00Z",
+      "rollback_plan": "Expire temporary monitoring increase after TTL unless SOC extends it.",
+      "evidence_refs": [
+        "WEB-EBANK-01 outbound HTTPS to 198.51.100.42"
+      ],
+      "playbook_source": "PB-EXECUTION",
+      "rationale": "Increase monitoring on the affected eBanking host while containment remains suggest-only.",
+      "risk_if_wrong": "low"
+    },
+    {
+      "action_id": "act-003",
+      "timestamp": "2026-07-05T09:10:03Z",
+      "priority": "high",
+      "phase": "predict",
+      "action_type": "add_watchlist",
+      "target": {
+        "type": "ip",
+        "value_masked": "198.51.100.42"
+      },
+      "approval_mode": "AUTO",
+      "status": "executed",
+      "ttl_minutes": 120,
+      "expires_at": "2026-07-05T11:10:00Z",
+      "rollback_plan": "Remove temporary watchlist entry at TTL or after SOC review.",
+      "evidence_refs": [
+        "WEB-EBANK-01 outbound HTTPS to 198.51.100.42"
+      ],
+      "playbook_source": "PB-EXECUTION",
+      "rationale": "Track the suspicious destination without changing network enforcement.",
+      "risk_if_wrong": "low"
+    },
+    {
+      "action_id": "act-004",
+      "timestamp": "2026-07-05T09:10:04Z",
+      "priority": "high",
+      "phase": "hunt",
+      "action_type": "create_hunt",
+      "target": {
+        "type": "api_endpoint",
+        "value_masked": "account details API"
+      },
+      "approval_mode": "AUTO",
+      "status": "executed",
+      "ttl_minutes": 120,
+      "expires_at": "2026-07-05T11:10:00Z",
+      "rollback_plan": "Expire temporary hunt after TTL unless SOC extends investigation.",
+      "evidence_refs": [
+        "req-7b2e4d91"
+      ],
+      "playbook_source": "PB-WEB-EDGE",
+      "rationale": "Search for additional ownership mismatches and adjacent account-object reads.",
+      "risk_if_wrong": "low"
+    },
+    {
+      "action_id": "act-005",
+      "timestamp": "2026-07-05T09:10:05Z",
+      "priority": "critical",
+      "phase": "notify",
+      "action_type": "open_ticket",
+      "target": {
+        "type": "ticket",
+        "value_masked": "INC-20260705-0012"
+      },
+      "approval_mode": "AUTO",
+      "status": "executed",
+      "ttl_minutes": null,
+      "expires_at": null,
+      "rollback_plan": "Close or downgrade the ticket if SOC review disproves the case.",
+      "evidence_refs": [
+        "req-7b2e4d91",
+        "WEB-EBANK-01 outbound HTTPS to 198.51.100.42"
+      ],
+      "playbook_source": "PB-WEB-EDGE",
+      "rationale": "Open a SOC work item because the final risk is above the mandatory response threshold.",
+      "risk_if_wrong": "low"
+    },
+    {
+      "action_id": "act-006",
+      "timestamp": "2026-07-05T09:10:06Z",
+      "priority": "critical",
+      "phase": "notify",
+      "action_type": "notify_soc",
+      "target": {
+        "type": "dashboard",
+        "value_masked": "soc_dashboard"
+      },
+      "approval_mode": "AUTO",
+      "status": "executed",
+      "ttl_minutes": null,
+      "expires_at": null,
+      "rollback_plan": "Append correction notice if SOC review changes the decision.",
+      "evidence_refs": [
+        "req-7b2e4d91",
+        "WEB-EBANK-01 outbound HTTPS to 198.51.100.42"
+      ],
+      "playbook_source": "PB-WEB-EDGE",
+      "rationale": "Notify SOC channels because final risk is above 6.0.",
+      "risk_if_wrong": "low"
+    },
+    {
+      "action_id": "act-007",
+      "timestamp": "2026-07-05T09:10:07Z",
+      "priority": "high",
+      "phase": "contain",
+      "action_type": "block_ip",
+      "target": {
+        "type": "ip",
+        "value_masked": "198.51.100.42"
+      },
+      "approval_mode": "AUTO",
+      "status": "suggested",
+      "ttl_minutes": 60,
+      "expires_at": "2026-07-05T10:10:00Z",
+      "rollback_plan": "Remove temporary firewall block or auto-unblock after 60 minutes unless SOC confirms extension.",
+      "evidence_refs": [
+        "WEB-EBANK-01 outbound HTTPS to 198.51.100.42"
+      ],
+      "playbook_source": "PB-EXECUTION",
+      "rationale": "Scoped time-bound block is recommended, but not executed because SOC Autopilot is OFF.",
+      "risk_if_wrong": "medium"
+    }
+  ],
+  "predictive_defense": {
+    "predicted_techniques": [
+      {
+        "technique_id": "T1059",
+        "technique_name": "Command and Scripting Interpreter",
+        "source": "mitre_prediction_chain",
+        "why_likely": "Public application exploitation is commonly followed by execution attempts.",
+        "priority": "medium"
+      },
+      {
+        "technique_id": "T1005",
+        "technique_name": "Data from Local System",
+        "source": "generic_kill_chain",
+        "why_likely": "Customer-data API exposure can progress into local or repository data collection.",
+        "priority": "high"
+      }
+    ],
+    "temporary_detections": [
+      "Detect repeated ownership mismatch on account, customer, beneficiary, loan, statement, and document objects.",
+      "Detect outbound connections from eBanking web hosts following authorization anomalies."
+    ],
+    "watch_for_next": [
+      "More HTTP 200 responses for objects outside authenticated ownership.",
+      "Tool transfer, command execution, or C2 from WEB-EBANK-01.",
+      "Bulk account-detail reads or statement downloads."
+    ]
+  },
+  "output_and_notification": {
+    "suggested_actions": [
+      "Block IP 198.51.100.42 for 60 minutes if SOC confirms.",
+      "Deploy scoped WAF virtual patch if ownership mismatch rule is validated."
+    ],
+    "executed_actions": [
+      "Preserved API, IAM, and database evidence.",
+      "Raised monitoring on WEB-EBANK-01.",
+      "Added temporary watchlist entry for 198.51.100.42.",
+      "Created 120-minute hunt for adjacent object-access abuse.",
+      "Opened SOC ticket INC-20260705-0012.",
+      "Notified SOC channels."
+    ],
+    "notification_targets": [
+      "soc_dashboard",
+      "alert_notification",
+      "telegram_teams",
+      "email",
+      "jira"
+    ],
+    "ticket_payload": {
+      "title": "Confirmed eBanking API attack chain",
+      "priority": "critical",
+      "body": "Layer 2 verification confirmed public API abuse with outbound host activity. SOC Autopilot is OFF, so containment is suggested only.",
+      "labels": [
+        "PB-WEB-EDGE",
+        "PB-EXECUTION",
+        "customer-data-risk",
+        "suggest-only"
+      ]
+    }
+  },
+  "soc_feedback_controls": {
+    "allowed_actions": [
+      "confirm",
+      "undo",
+      "rollback",
+      "modify",
+      "extend_investigation",
+      "comment"
+    ],
+    "callback_required": true,
+    "callback_channel": "api_call"
+  },
+  "audit": {
+    "immutable_log_required": true,
+    "audit_events": [
+      {
+        "event_type": "decision",
+        "event_time": "2026-07-05T09:10:00Z",
+        "actor": "layer2_orchestrator_soar",
+        "command_signature_ref": null,
+        "details": "Layer 2 verification and critical score reached; risk response floor actions executed; SOC Autopilot OFF forced containment suggest-only behavior.",
+        "result": "suggest_only"
+      },
+      {
+        "event_type": "action",
+        "event_time": "2026-07-05T09:10:02Z",
+        "actor": "layer2_orchestrator_soar",
+        "command_signature_ref": "risk_response_floor://INC-20260705-0012",
+        "details": "Executed non-disruptive response floor actions: preserve_logs, raise_monitoring, add_watchlist, create_hunt, open_ticket, notify_soc.",
+        "result": "executed"
+      },
+      {
+        "event_type": "notification",
+        "event_time": "2026-07-05T09:10:03Z",
+        "actor": "layer2_orchestrator_soar",
+        "command_signature_ref": null,
+        "details": "Sent SOC dashboard, alert, collaboration, email, and Jira notifications.",
+        "result": "sent"
+      },
+      {
+        "event_type": "policy_check",
+        "event_time": "2026-07-05T09:10:00Z",
+        "actor": "layer2_orchestrator_soar",
+        "command_signature_ref": "opa://decision/2026-07-05/allow-scoped-web-containment",
+        "details": "OPA allowed scoped web containment, but execution was not performed because automation is disabled.",
+        "result": "allow_not_executed"
+      }
+    ],
+    "compliance_tags": [
+      "ISO27001",
+      "PCI-DSS"
+    ]
+  },
+  "safety": {
+    "prompt_injection_observed": false,
+    "prompt_injection_evidence_masked": [],
+    "log_instruction_ignored": true,
+    "sensitive_values_masked": true,
+    "no_destructive_action_selected": true
+  },
+  "quality": {
+    "missing_fields": [],
+    "limitations": [
+      "SOC Autopilot setting is OFF, so no containment action was executed.",
+      "Bulk customer data exfiltration is not confirmed."
+    ],
+    "requires_human_review": false
+  }
+}
