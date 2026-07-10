@@ -188,6 +188,30 @@ Technique verification and expansion:
 4. Do not claim a child technique unless evidence supports it.
 5. If no known technique matches but behavior is abnormal, route to `PB-ANOMALY`.
 
+Injection type cross-verification (MANDATORY when Layer 1 finding contains an injection CAPEC OR raw evidence contains injection indicators):
+Layer 2 MUST run injection cross-verification when either condition is true:
+1. Layer 1 uses an injection-related CAPEC: CAPEC-66, CAPEC-7, CAPEC-108, CAPEC-110, CAPEC-109, CAPEC-470, CAPEC-676, CAPEC-63, CAPEC-591, CAPEC-592, CAPEC-588, CAPEC-86, CAPEC-101, CAPEC-88, CAPEC-15, CAPEC-664, CAPEC-126, CAPEC-139, CAPEC-136, CAPEC-201, CAPEC-228, CAPEC-250, CAPEC-83, CAPEC-84, CAPEC-105.
+2. `raw_evidence` contains injection indicators regardless of `capec_id`, including empty CAPEC or generic CAPECs such as CAPEC-153/CAPEC-137: SQL keywords, NoSQL `$` operators, HTML/JavaScript tags, template syntax, `${jndi:...}`, OS command delimiters, internal URL/metadata targets, traversal sequences, LDAP filter syntax, XML/DTD/ENTITY syntax, XPath/XQuery syntax, CRLF/header-splitting syntax, or encoded forms of these indicators.
+
+Cross-verification procedure:
+1. Inspect both the original `raw_evidence` payload and any safely decoded form visible from logs (URL encoding, HTML entities, Unicode escapes, obvious hex metacharacters). Do not execute payloads.
+2. Evaluate all matching injection families before selecting a corrected CAPEC. Do not stop at the first keyword match.
+3. Resolve mixed payloads with this priority: independent response/error/callback confirmation; then the parameter/header/request part that produced the alert or error; then explicit outer wrapper/execution context; then payload keyword count. WAF rule names are context only and never override payload analysis.
+4. If evidence describes HTML/JavaScript elements (script tags, event handlers, DOM manipulation), classify as XSS CAPEC-63/591/592/588 unless stronger confirmation shows a different family. If HTML wraps SQL text in the same parameter, use XSS as primary and mention SQL text as secondary context.
+5. If evidence describes SQL syntax (SELECT, UNION, INSERT, DELETE, DROP, OR 1=1, SLEEP, BENCHMARK, SQL comments/errors), classify as SQLi CAPEC-66/7/108/110/109/470 when not superseded by the mixed-payload rules.
+6. If evidence describes NoSQL JSON/document-query operators (`$gt`, `$ne`, `$where`, `$regex`, `$or`, JSON keys beginning with `$`) in query/auth/search context, classify as NoSQL Injection CAPEC-676.
+7. If evidence describes `${jndi:ldap://...}`, `${jndi:rmi://...}`, obfuscated Log4j lookup syntax, or confirmed JNDI callback, classify as Log4Shell/JNDI lookup exploitation with ATT&CK T1190. Use empty CAPEC when no supported local CAPEC fits. Do not override to SSTI CAPEC-101 merely because `${...}` appears, and do not override to LDAP Injection merely because the callback URI uses LDAP.
+8. If evidence describes template syntax (`{{`, `}}`, `{%`, `%}`, `${...}`, `__class__`, `__mro__`) and no JNDI marker is present, classify as SSTI. Use CAPEC-101 only as the closest available CAPEC because MITRE CAPEC does not have a dedicated Server-Side Template Injection entry; ATT&CK T1221 is the primary SSTI identifier.
+9. If evidence describes OS command patterns (`; whoami`, `| cat`, `$()` substitution, backtick commands, `cmd.exe`, `/bin/sh`), classify as Command Injection CAPEC-88 or CAPEC-15.
+10. If evidence describes internal/private URL targets or cloud metadata endpoints, classify as SSRF CAPEC-664.
+11. If evidence describes traversal sequences (`../`, `..%2f`, `..%5c`) and file-path access, classify as Path Traversal CAPEC-126/139.
+12. If evidence describes LDAP filter manipulation in directory/auth search context, classify as LDAP Injection CAPEC-136.
+13. If evidence describes DOCTYPE/ENTITY/external entity behavior, classify as DTD/XXE-style injection with CAPEC-228, or CAPEC-201 when serialized external-linking behavior is the closest local match; if it describes XML query selectors/functions without external entity behavior, classify as XPath/XQuery Injection CAPEC-83/84; if it describes generic XML injection without DTD/ENTITY, use CAPEC-250.
+14. If evidence describes `%0d%0a`, CRLF, or injected HTTP response/request headers, classify as CRLF / HTTP Header Injection CAPEC-105.
+15. When Layer 2 corrects an injection mapping, update `verified_case.verified_capec` with the corrected CAPEC when one is supported, update `verified_case.verified_techniques` if the MITRE mapping changes, and add a note in `scoring.score_rationale`: "Layer 2 corrected injection type from [original CAPEC] to [corrected CAPEC or no supported CAPEC] based on payload content analysis."
+16. Use the corrected CAPEC for risk scoring lookup in `risk_scoring/capec_risk_scores.md`. If the corrected classification has no supported CAPEC, score from the verified ATT&CK technique or conservative fallback scoring. Do not score using the original misclassified CAPEC.
+17. Injection override is taxonomy correction only. It does not by itself confirm exploitation, increase verification strength, or open auto-containment gates. Verification state, risk cap, and containment eligibility still require independent Layer 2 evidence under the verification rules above.
+
 Risk scoring:
 1. Determine `base_threat_score_0_10` from the matching row in `risk_scoring/attack_vector_risk_scores.md` or `risk_scoring/capec_risk_scores.md` when available. Record the table and row key in `scoring.score_source` and `scoring.score_source_ref`. Record the row `calibration_reason` in `scoring.score_table_calibration_reason` or `scoring.score_rationale`.
 2. If no score table is available, assign conservative base score:
