@@ -86,9 +86,9 @@ Risk score action gate:
 
 | Final Risk Score | Required Handling |
 |------------------|-------------------|
-| `0.0-6.0` | Monitor, preserve, hunt, or request more evidence according to verification state. Do not auto-contain only because Layer 1 alerted. |
-| `>6.0` | Execute all available non-disruptive SOC actions: preserve logs/evidence, raise monitoring, add scoped watchlists or temporary detections, create hunt tasks, open/update SOC ticket, and notify SOC. |
-| `>6.0` **AND** all `automation_control.auto_containment_gates` fields are true | Execute eligible containment: scoped IP block, WAF virtual patch, force logout, host quarantine, limited network control, or access revocation. |
+| `0.0-5.0` | Monitor, preserve, hunt, or request more evidence according to verification state. Do not auto-contain only because Layer 1 alerted. |
+| `>5.0` | Execute all available non-disruptive SOC actions: preserve logs/evidence, raise monitoring, add scoped watchlists or temporary detections, create hunt tasks, open/update SOC ticket, and notify SOC. |
+| `>5.0` **AND** all `automation_control.auto_containment_gates` fields are true | Execute eligible containment: scoped IP block, WAF virtual patch, force logout, host quarantine, limited network control, or access revocation. |
 | Any score with manual-only target or high business-impact action | Queue for approval or manual escalation. Never automatically isolate SWIFT, Core Banking, HSM, ATM switch, critical VLAN, DR, broad services, external notifications, destructive cleanup, or data deletion. |
 
 Populate `automation_control.auto_containment_gates` with these boolean fields and their source conditions:
@@ -99,7 +99,7 @@ Populate `automation_control.auto_containment_gates` with these boolean fields a
 | `l2_verification_performed` | `l2_independent_verification.performed=true` |
 | `verification_confirmed` | `l2_independent_verification.verification_state="confirmed"` |
 | `verification_supported_or_strong` | `l2_independent_verification.verification_strength` is `supported` or `strong` |
-| `risk_above_floor` | `scoring.final_risk_score_0_10 > 6.0` |
+| `risk_above_floor` | `scoring.final_risk_score_0_10 > 5.0` |
 | `opa_allow` | `policy_guardrails.opa_result="allow"` |
 | `soc_autopilot_on` | `automation_control.soc_autopilot_enabled=true` |
 | `execution_window_open` | current time is inside the configured execution window, default `08:00-20:00 Asia/Ho_Chi_Minh` |
@@ -842,7 +842,7 @@ Before final Layer 2 output, verify:
 8. Banking impact is assessed for SWIFT/payment, Core Banking, customer data, ATM/HSM, privileged identity, backup/recovery, and security controls.
 9. Evidence preservation is listed before disruptive containment.
 10. Regulatory assessment is separated from external notification.
-11. If `final_risk_score_0_10 > 6.0`, output includes `decision.risk_response_floor.triggered=true` and every available non-disruptive floor action is present with `status="executed"` or a documented blocked/unavailable reason.
+11. If `final_risk_score_0_10 > 5.0`, output includes `decision.risk_response_floor.triggered=true` and every available non-disruptive floor action is present with `status="executed"` or a documented blocked/unavailable reason.
 12. If an environment-changing action has `status="executed"`, the full auto-containment gate is documented under `automation_control.auto_containment_gates` and every gate field is `true`: `threat_confirmed`, `l2_verification_performed`, `verification_confirmed`, `verification_supported_or_strong`, `risk_above_floor`, `opa_allow`, `soc_autopilot_on`, `execution_window_open`, `action_scoped_timebound_reversible`, `rollback_available`, `dangerous_now_behavior`, and `verified_target_entity`.
 13. If `correlation.same_attack_assessment=true`, `correlation.correlation_keys.entities` contains at least one concrete entity link such as user, account, host, IP, session, request, transaction, or object ID; worker count, same broad domain, or time-only overlap is not sufficient.
 14. If Layer 1 findings overlap only by time window, every non-primary finding is listed in `correlation.unrelated_findings[]` with `recommended_handling`; it is not hidden only in narrative quality notes.

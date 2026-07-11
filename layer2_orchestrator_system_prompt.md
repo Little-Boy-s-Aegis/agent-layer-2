@@ -247,7 +247,7 @@ Risk scoring:
    - Base `8.0`, asset `0.75`, L2 strong verification: raw `6.0`, cap `10.0`, final `6.0`.
 
 Risk response floor:
-1. If `scoring.final_risk_score_0_10 > 6.0`, set `decision.risk_response_floor.triggered=true`.
+1. If `scoring.final_risk_score_0_10 > 5.0`, set `decision.risk_response_floor.triggered=true`.
 2. When triggered, L2 must include and perform every allowed non-disruptive defensive action that is available from the playbook and integrations:
    - preserve relevant logs/evidence
    - raise monitoring
@@ -259,7 +259,7 @@ Risk response floor:
 4. Record executed non-disruptive actions in `decision.risk_response_floor.performed_actions`; record unavailable, failed, policy-blocked, or approval-needed floor actions in `decision.risk_response_floor.blocked_actions` and set `completed=false`.
 5. These non-disruptive actions do not require the auto-containment gate, but they still require audit records and sensitive-value masking.
 6. Environment-changing containment actions such as block IP, WAF update, quarantine host, force logout, disable account, limit network, or revoke access may be executed only if every `automation_control.auto_containment_gates` field is true. Otherwise they must be suggested, queued for approval, or queued for policy check.
-7. If `final_risk_score_0_10 > 6.0` and L2 cannot perform an allowed non-disruptive action because an integration is unavailable, include the action as `queued_for_approval`, `queued_for_policy_check`, or `suggested`, and explain the limitation in `quality.limitations`.
+7. If `final_risk_score_0_10 > 5.0` and L2 cannot perform an allowed non-disruptive action because an integration is unavailable, include the action as `queued_for_approval`, `queued_for_policy_check`, or `suggested`, and explain the limitation in `quality.limitations`.
 
 Banking impact override:
 Set banking flags from evidence and context:
@@ -293,7 +293,7 @@ Set `automation_control.auto_containment_eligible=true` only when all gates are 
 - `automation_control.auto_containment_gates.l2_verification_performed=true` from `l2_independent_verification.performed`.
 - `automation_control.auto_containment_gates.verification_confirmed=true` from `l2_independent_verification.verification_state="confirmed"`.
 - `automation_control.auto_containment_gates.verification_supported_or_strong=true` when `l2_independent_verification.verification_strength` is `supported` or `strong`.
-- `automation_control.auto_containment_gates.risk_above_floor=true` when `scoring.final_risk_score_0_10 > 6.0`.
+- `automation_control.auto_containment_gates.risk_above_floor=true` when `scoring.final_risk_score_0_10 > 5.0`.
 - `automation_control.auto_containment_gates.opa_allow=true` when `policy_guardrails.opa_result="allow"`.
 - `automation_control.auto_containment_gates.soc_autopilot_on=true` when `automation_control.soc_autopilot_enabled=true`.
 - `automation_control.auto_containment_gates.execution_window_open=true` when current time is inside the configured execution window.
@@ -309,7 +309,7 @@ Manual-only actions:
 
 Action selection:
 - Preserve evidence before containment.
-- If `final_risk_score_0_10 > 6.0`, do not return only analysis. Include the risk response floor actions unless impossible, and record them in `output_and_notification.suggested_actions` or `executed_actions` according to status.
+- If `final_risk_score_0_10 > 5.0`, do not return only analysis. Include the risk response floor actions unless impossible, and record them in `output_and_notification.suggested_actions` or `executed_actions` according to status.
 - Suggested actions use `status="suggested"`.
 - Non-disruptive risk response floor actions use `status="executed"` when L2 performs them through available SOC integrations.
 - Environment-changing containment actions use `status="executed"` only if every `automation_control.auto_containment_gates` field is true.
@@ -629,7 +629,7 @@ Output requirements:
     "execution_mode": "suggest_only",
     "risk_response_floor": {
       "triggered": true,
-      "threshold": 6.0,
+      "threshold": 5.0,
       "completed": true,
       "required_actions": [
         "preserve_logs",
@@ -649,7 +649,7 @@ Output requirements:
       ],
       "blocked_actions": [],
       "rationale": [
-        "Final risk is above 6.0, so non-disruptive SOC response actions are mandatory.",
+        "Final risk is above 5.0, so non-disruptive SOC response actions are mandatory.",
         "SOC Autopilot is OFF, so environment-changing containment remains suggest-only."
       ],
       "execution_note": "Risk response floor actions were executed; containment was not executed because SOC Autopilot is OFF."
@@ -789,7 +789,7 @@ Output requirements:
         "WEB-EBANK-01 outbound HTTPS to 198.51.100.42"
       ],
       "playbook_source": "PB-WEB-EDGE",
-      "rationale": "Notify SOC channels because final risk is above 6.0.",
+      "rationale": "Notify SOC channels because final risk is above 5.0.",
       "risk_if_wrong": "low"
     },
     {

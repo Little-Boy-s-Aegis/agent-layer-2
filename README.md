@@ -79,7 +79,7 @@ inventory, threat intelligence, vector database, and local banking context.
 5. Score final risk with `risk_scoring/attack_vector_risk_scores.md` or
    `risk_scoring/capec_risk_scores.md`, then apply asset criticality and the
    Layer 2 verification cap.
-6. If `final_risk_score_0_10 > 6.0`, execute every available non-disruptive SOC
+6. If `final_risk_score_0_10 > 5.0`, execute every available non-disruptive SOC
    response floor action: preserve evidence, raise monitoring, add scoped
    watchlists or temporary detections, create hunts, open or update a ticket,
    and notify SOC.
@@ -145,7 +145,7 @@ find . -name '*.csv' -print
 rg -n "verification_modifier|structural_agreement|base_confident" .
 ! rg -n "littleboy\\.soc\\.layer2\\.orchestrator_decision\\.v[0-7]" .
 ! rg -n 'automatic containment.*verification_strength="strong"|verification_strength="strong".*automatic containment' layer2_orchestrator_system_prompt.md
-rg -n "final_risk_score_0_10 > 6.0" layer2_orchestrator_system_prompt.md orchestrator_l2_playbooks.md
+rg -n "final_risk_score_0_10 > 5.0" layer2_orchestrator_system_prompt.md orchestrator_l2_playbooks.md
 ```
 
 Expected result:
@@ -156,6 +156,6 @@ Expected result:
 - No CSV files are required.
 - Old Layer 1 confidence, consensus, or BFT scoring terms are not used as
   runtime scoring inputs.
-- The risk response floor is triggered at `final_risk_score_0_10 > 6.0`.
+- The risk response floor is triggered at `final_risk_score_0_10 > 5.0`.
 - Environment-changing containment requires every
   `automation_control.auto_containment_gates` field to be true.
