@@ -1,5 +1,7 @@
 # Agent L2 - Banking SOC Orchestrator
 
+> **Part of the [Little Boy's Aegis](https://github.com/Little-Boy-s-Aegis) project** -- an AI-driven Security Operations Center (SOC) platform for banking infrastructure.
+
 This folder stores the Layer 2 orchestrator deliverable for Project Little Boy Aegis.
 The orchestrator is the SOAR Decision Engine that sits between Layer 1 sensor agents
 and the SOC reporting layer, as shown in the system architecture diagram.
@@ -159,3 +161,21 @@ Expected result:
 - The risk response floor is triggered at `final_risk_score_0_10 > 5.0`.
 - Environment-changing containment requires every
   `automation_control.auto_containment_gates` field to be true.
+
+---
+
+## Related Repositories
+
+All repositories under the [Little Boy's Aegis](https://github.com/Little-Boy-s-Aegis) organization:
+
+| Repository | Description |
+|---|---|
+| [aegis-bank-deployment](https://github.com/Little-Boy-s-Aegis/aegis-bank-deployment) | Docker Compose orchestration for the full platform |
+| [aegis-bank-backend](https://github.com/Little-Boy-s-Aegis/aegis-bank-backend) | Spring Boot banking API |
+| [aegis-bank-web-client](https://github.com/Little-Boy-s-Aegis/aegis-bank-web-client) | Next.js web banking portal |
+| [aegis-bank-mobile-app](https://github.com/Little-Boy-s-Aegis/aegis-bank-mobile-app) | Flutter mobile banking app |
+| [dashboard](https://github.com/Little-Boy-s-Aegis/dashboard) | SOC Dashboard -- Go backend + React frontend |
+| [agent-layer-1](https://github.com/Little-Boy-s-Aegis/agent-layer-1) | AI Sensor Agents (Layer 1) |
+| [aegis-soar-engine](https://github.com/Little-Boy-s-Aegis/aegis-soar-engine) | SOAR Decision Engine |
+| [aegis-staging-sandbox](https://github.com/Little-Boy-s-Aegis/aegis-staging-sandbox) | Staging Sandbox environment |
+| [aegis-bank-terraform](https://github.com/Little-Boy-s-Aegis/aegis-bank-terraform) | Terraform IaC for cloud deployment |
