@@ -2,14 +2,9 @@
 
 > **Part of the [Little Boy's Aegis](https://github.com/Little-Boy-s-Aegis) project** -- an AI-driven Security Operations Center (SOC) platform for banking infrastructure.
 
-This folder stores the Layer 2 orchestrator deliverable for Project Little Boy Aegis.
+This repository stores the Layer 2 orchestrator contract for Project Little Boy Aegis.
 The orchestrator is the SOAR Decision Engine that sits between Layer 1 sensor agents
 and the SOC reporting layer, as shown in the system architecture diagram.
-
-Canonical path: `/mnt/d/Hackathon-2026/agent-l2`. This is the current source of
-truth for the Layer 2 deliverable. If a product-copy mirror is restored later,
-syncing that mirror is a separate release step and is not required by this
-runtime contract.
 
 The orchestrator receives Layer 1 findings, verifies them independently against
 logs and context, computes final risk, applies policy guardrails, selects
@@ -24,12 +19,45 @@ playbooks, records audit events, and reports to SOC channels.
   use it as a filled example, not as the validation contract.
 - `orchestrator_l2_playbooks.md`: playbook routing, response modes, approval
   rules, banking overrides, predictive defense, and quality gates.
-- `l1_l2_system_design.md`: behavioral system design, subagent duties, and
-  L1/L2 boundary contract.
 - `risk_scoring/`: authoritative Markdown risk scoring tables for the
   orchestrator.
 - `mitre_attack_full.json` and `mitre_attack_full.md`: offline MITRE ATT&CK
   knowledge base.
+
+## Repository Layout
+
+```text
+agent-layer-2/
+├── layer2_orchestrator_system_prompt.md       # Runtime behavior and safety rules
+├── layer2_orchestrator_output_schema.json     # Draft 2020-12 output contract
+├── layer2_orchestrator_output_example.json    # Filled decision example
+├── layer2_json_output_example.json            # Additional integration fixture
+├── orchestrator_l2_playbooks.md               # Routing and approval matrix
+├── mitre_attack_full.json                     # Machine-readable ATT&CK reference
+├── mitre_attack_full.md                       # Human-readable ATT&CK reference
+└── risk_scoring/                               # Risk tables and calibration notes
+```
+
+This repository is a versioned prompt-and-schema package, not a standalone
+service. The executable consumer is
+[`aegis-soar-engine`](https://github.com/Little-Boy-s-Aegis/aegis-soar-engine),
+which loads these files through `AGENT_L2_DIR`, a read-only container mount, or
+the layer-artifact S3 synchronization settings.
+
+## Integration Quick Start
+
+Clone this repository next to `aegis-soar-engine`, or point the engine at any
+directory containing this repository's artifacts:
+
+```bash
+export AGENT_L2_DIR="$(pwd)"
+python3 -m json.tool layer2_orchestrator_output_schema.json >/dev/null
+```
+
+When the repositories are siblings, the SOAR engine discovers
+`../agent-layer-2` automatically. Production deployments should pin both
+repositories to reviewed revisions so a schema change cannot silently diverge
+from the runtime code.
 
 ## Runtime Inputs
 
@@ -161,6 +189,19 @@ Expected result:
 - The risk response floor is triggered at `final_risk_score_0_10 > 5.0`.
 - Environment-changing containment requires every
   `automation_control.auto_containment_gates` field to be true.
+
+## Change Management
+
+- Treat the JSON Schema as the compatibility boundary. Breaking field changes
+  require a new `schema_version` and synchronized consumer updates.
+- Keep the system prompt, playbook rules, schema, and examples consistent in a
+  single change.
+- Do not add runtime secrets, live customer telemetry, unmasked identifiers, or
+  operational exploit instructions to this repository.
+- Risk tables are reviewed inputs, not executable authorization. OPA, autopilot,
+  verification, rollback, and execution-window checks remain mandatory.
+- Run the validation commands above and validate at least one positive, one
+  no-threat, and one prompt-injection output before release.
 
 ---
 
